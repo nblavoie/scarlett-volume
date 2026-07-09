@@ -1,0 +1,11 @@
+#!/bin/sh
+# Recharge le service audio pour que le driver « Scarlett Volume » apparaisse,
+# puis ouvre l'app dans la session de l'utilisateur connecté.
+killall coreaudiod 2>/dev/null || true
+sleep 2
+
+CONSOLE_USER="$(stat -f%Su /dev/console)"
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+    su "$CONSOLE_USER" -c 'open "/Applications/Scarlett Volume.app"' || true
+fi
+exit 0

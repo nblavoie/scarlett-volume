@@ -32,10 +32,23 @@ Volume » (UID `Scarlett Volume_UID`, défini dans `build.sh`).
 
 ## Installation
 
+Le plus simple : télécharger le **.pkg** de la
+[dernière release](https://github.com/nblavoie/scarlett-volume/releases) —
+il installe l'app et le driver, redémarre le service audio et lance l'app.
+(Non notarié : clic droit → Ouvrir si macOS le bloque.)
+
+Depuis les sources :
+
 ```bash
 ./build.sh
 cp -R "build/Scarlett Volume.app" /Applications/
 open "/Applications/Scarlett Volume.app"
+```
+
+Pour produire l'installeur .pkg soi-même :
+
+```bash
+./package.sh 1.0.0   # → build/Scarlett-Volume-1.0.0.pkg
 ```
 
 Le driver est embarqué dans l'app. Au lancement, s'il n'est pas installé (ou si
@@ -90,6 +103,8 @@ redemander la permission micro.
   BlackHole 0.7.x, GPL-3.0, © Existential Audio)
 - `Info.plist` — LSUIElement (pas d'icône Dock), description micro
 - `build.sh` — compile driver + app, embarque le driver dans l'app
+- `package.sh` + `installer/` — construit l'installeur .pkg (app + driver +
+  postinstall qui redémarre coreaudiod et lance l'app)
 
 ## Prérequis
 
