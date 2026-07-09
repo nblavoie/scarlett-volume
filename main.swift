@@ -976,16 +976,70 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
         }
 
-        let symbol: String
-        if !e.running { symbol = "speaker.slash.circle" }
-        else if s.muted || s.volume == 0 { symbol = "speaker.slash.fill" }
-        else if s.volume < 0.34 { symbol = "speaker.wave.1.fill" }
-        else if s.volume < 0.67 { symbol = "speaker.wave.2.fill" }
-        else { symbol = "speaker.wave.3.fill" }
-        if let img = NSImage(systemSymbolName: symbol, accessibilityDescription: "Scarlett Volume") {
-            img.isTemplate = true
-            statusItem.button?.image = img
+        statusItem.button?.image = knobStatusIcon(volume: s.volume, muted: s.muted, running: e.running)
+    }
+
+    // Mini-bouton de volume monochrome (template : macOS le teinte selon la barre).
+    // L'aiguille suit le volume, les graduations s'éteignent au-delà du niveau.
+    private func knobStatusIcon(volume: Float, muted: Bool, running: Bool) -> NSImage {
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+            let c = NSPoint(x: 9, y: 9)
+            func dir(_ deg: CGFloat) -> NSPoint {
+                let r = deg * .pi / 180
+                return NSPoint(x: cos(r), y: sin(r))
+            }
+            func ray(_ deg: CGFloat, _ r0: CGFloat, _ r1: CGFloat, _ width: CGFloat) -> NSBezierPath {
+                let d = dir(deg)
+                let p = NSBezierPath()
+                p.move(to: NSPoint(x: c.x + d.x * r0, y: c.y + d.y * r0))
+                p.line(to: NSPoint(x: c.x + d.x * r1, y: c.y + d.y * r1))
+                p.lineWidth = width
+                p.lineCapStyle = .round
+                return p
+            }
+
+            let ring = NSBezierPath(ovalIn: NSRect(x: c.x - 6.1, y: c.y - 6.1, width: 12.2, height: 12.2))
+            ring.lineWidth = 1.5
+
+            // Moteur arrêté : anneau pointillé estompé, rien d'autre
+            guard running else {
+                ring.setLineDash([2.4, 2.2], count: 2, phase: 0)
+                NSColor.black.withAlphaComponent(0.5).setStroke()
+                ring.stroke()
+                return true
+            }
+
+            NSColor.black.setStroke()
+            ring.stroke()
+
+            // Graduations (min bas-gauche → max bas-droite, course 270°)
+            let angles: [CGFloat] = [225, 157.5, 90, 22.5, -45]
+            for (i, a) in angles.enumerated() {
+                let t = Float(i) / Float(angles.count - 1)
+                let on = !muted && t <= volume
+                NSColor.black.withAlphaComponent(on ? 0.95 : 0.35).setStroke()
+                ray(a, 7.1, 8.3, 1.4).stroke()
+            }
+
+            NSColor.black.setStroke()
+            if muted {
+                // Barre diagonale façon « sourdine »
+                let slash = NSBezierPath()
+                slash.move(to: NSPoint(x: c.x - 4.4, y: c.y + 4.4))
+                slash.line(to: NSPoint(x: c.x + 4.4, y: c.y - 4.4))
+                slash.lineWidth = 1.8
+                slash.lineCapStyle = .round
+                slash.stroke()
+            } else {
+                // Aiguille
+                let a = 225 - CGFloat(max(0, min(1, volume))) * 270
+                ray(a, 1.0, 4.6, 1.9).stroke()
+            }
+            return true
         }
+        image.isTemplate = true
+        image.accessibilityDescription = "Scarlett Volume"
+        return image
     }
 }
 
