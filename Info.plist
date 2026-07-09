@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>fr</string>
+	<key>CFBundleExecutable</key>
+	<string>ScarlettVolume</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.kortexs.scarlett-volume</string>
+	<key>CFBundleName</key>
+	<string>Scarlett Volume</string>
+	<key>CFBundleDisplayName</key>
+	<string>Scarlett Volume</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Scarlett Volume capture la sortie système (BlackHole) pour la rejouer vers la Scarlett avec contrôle du volume. Aucun micro n'est enregistré.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© Kortexs</string>
+</dict>
+</plist>
