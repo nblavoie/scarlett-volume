@@ -29,6 +29,7 @@ swiftc -O -o "$APP/Contents/MacOS/ScarlettVolume" main.swift \
   -framework Cocoa -framework CoreAudio -framework AVFoundation \
   -framework Accelerate -framework ServiceManagement
 cp Info.plist "$APP/Contents/Info.plist"
+cp assets/AppIcon.icns "$APP/Contents/Resources/"
 cp -R "$DRIVER" "$APP/Contents/Resources/"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 codesign --force --sign - "$APP"

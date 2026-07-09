@@ -6,6 +6,8 @@
 	<string>fr</string>
 	<key>CFBundleExecutable</key>
 	<string>ScarlettVolume</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.kortexs.scarlett-volume</string>
 	<key>CFBundleName</key>

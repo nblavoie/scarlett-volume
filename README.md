@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/icon_1024.png" width="160" alt="Icône Scarlett Volume"></p>
+
 # Scarlett Volume
 
 Utilitaire macOS pour contrôler le volume d'une interface audio sans volume
@@ -105,6 +107,8 @@ redemander la permission micro.
 - `build.sh` — compile driver + app, embarque le driver dans l'app
 - `package.sh` + `installer/` — construit l'installeur .pkg (app + driver +
   postinstall qui redémarre coreaudiod et lance l'app)
+- `assets/make_icon.swift` — dessine l'icône en Core Graphics
+  (`swift make_icon.swift` puis `iconutil` pour régénérer `AppIcon.icns`)
 
 ## Prérequis
 

@@ -8,8 +8,10 @@ VERSION="${1:-1.0.0}"
 
 ./build.sh
 
-ROOT="build/pkgroot"
-rm -rf "$ROOT" build/dist.xml build/component.pkg
+# pkgroot dans un dossier temporaire : pkgbuild passe son contenu en root:wheel,
+# il ne doit donc pas vivre dans build/ (sinon le rm -rf suivant échoue)
+ROOT="$(mktemp -d "${TMPDIR:-/tmp}/scarlett-volume-pkgroot.XXXXXX")"
+rm -f build/dist.xml build/component.pkg
 mkdir -p "$ROOT/Applications" "$ROOT/Library/Audio/Plug-Ins/HAL"
 cp -R "build/Scarlett Volume.app" "$ROOT/Applications/"
 cp -R "build/Scarlett Volume.driver" "$ROOT/Library/Audio/Plug-Ins/HAL/"
@@ -41,4 +43,5 @@ EOF
 productbuild --distribution build/dist.xml --package-path build \
   "build/Scarlett-Volume-$VERSION.pkg"
 rm -f build/component.pkg build/dist.xml
+rm -rf "$ROOT" 2>/dev/null || true
 echo "OK → build/Scarlett-Volume-$VERSION.pkg"
