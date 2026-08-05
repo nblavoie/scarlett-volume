@@ -1,5 +1,5 @@
-// Génère l'icône de l'app (1024×1024 PNG) : bouton de volume style Scarlett
-// sur squircle macOS rouge Focusrite. Usage : swift make_icon.swift
+// Generates the app icon (1024×1024 PNG): a Scarlett-style volume knob
+// on a Focusrite-red macOS squircle. Usage: swift make_icon.swift
 import AppKit
 
 let S: CGFloat = 1024
@@ -18,7 +18,7 @@ func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, _ a: CGFloat = 1) -> NSColor 
     NSColor(calibratedRed: r, green: g, blue: b, alpha: a)
 }
 
-// Capsule orientée radialement depuis le centre (pour graduations et aiguille)
+// Capsule oriented radially from the center (for tick marks and needle)
 func radialCapsule(from r0: CGFloat, to r1: CGFloat, width: CGFloat, angle: CGFloat) -> NSBezierPath {
     let path = NSBezierPath(roundedRect: NSRect(x: r0, y: -width / 2, width: r1 - r0, height: width),
                             xRadius: width / 2, yRadius: width / 2)
@@ -28,7 +28,7 @@ func radialCapsule(from r0: CGFloat, to r1: CGFloat, width: CGFloat, angle: CGFl
     return path
 }
 
-// ===== Squircle macOS (824 pt centrée, marge transparente, ombre portée) =====
+// ===== macOS squircle (824 pt centered, transparent margin, drop shadow) =====
 let squircleRect = NSRect(x: 100, y: 108, width: 824, height: 824)
 let squircle = NSBezierPath(roundedRect: squircleRect, xRadius: 186, yRadius: 186)
 
@@ -42,14 +42,14 @@ rgb(0.60, 0.06, 0.10).setFill()
 squircle.fill()
 NSGraphicsContext.current?.restoreGraphicsState()
 
-// Dégradé rouge Focusrite, éclairé par le haut
+// Focusrite-red gradient, lit from the top
 NSGradient(colorsAndLocations:
     (rgb(1.00, 0.44, 0.36), 0.0),
     (rgb(0.88, 0.16, 0.19), 0.45),
     (rgb(0.50, 0.03, 0.09), 1.0))!
     .draw(in: squircle, angle: -90)
 
-// Halo doux derrière le bouton
+// Soft halo behind the knob
 NSGraphicsContext.current?.saveGraphicsState()
 squircle.addClip()
 NSGradient(colorsAndLocations:
@@ -70,7 +70,7 @@ for i in 0..<tickCount {
     radialCapsule(from: 330, to: on ? 372 : 362, width: on ? 13 : 10, angle: angle).fill()
 }
 
-// ===== Bouton (anthracite, comme le vrai bouton de la 2i2) =====
+// ===== Knob (charcoal, like the real 2i2 knob) =====
 let knobRadius: CGFloat = 296
 let knob = NSBezierPath(ovalIn: NSRect(x: center.x - knobRadius, y: center.y - knobRadius,
                                        width: knobRadius * 2, height: knobRadius * 2))
@@ -84,14 +84,14 @@ rgb(0.06, 0.06, 0.08).setFill()
 knob.fill()
 NSGraphicsContext.current?.restoreGraphicsState()
 
-// Biseau extérieur
+// Outer bevel
 NSGradient(colorsAndLocations:
     (rgb(0.29, 0.31, 0.36), 0.0),
     (rgb(0.10, 0.11, 0.13), 0.55),
     (rgb(0.04, 0.04, 0.06), 1.0))!
     .draw(in: knob, angle: -90)
 
-// Face intérieure
+// Inner face
 let faceRadius: CGFloat = 248
 let face = NSBezierPath(ovalIn: NSRect(x: center.x - faceRadius, y: center.y - faceRadius,
                                        width: faceRadius * 2, height: faceRadius * 2))
@@ -104,7 +104,7 @@ NSGradient(colorsAndLocations:
     (rgb(0.07, 0.07, 0.09), 1.0))!
     .draw(in: face, angle: -90)
 
-// Reflets du bord (lumière venant du haut)
+// Edge highlights (light coming from the top)
 let rim = NSBezierPath()
 rim.appendArc(withCenter: center, radius: knobRadius - 3, startAngle: 40, endAngle: 140)
 rim.lineWidth = 5
@@ -118,7 +118,7 @@ rimLow.lineCapStyle = .round
 NSColor.white.withAlphaComponent(0.07).setStroke()
 rimLow.stroke()
 
-// ===== Aiguille (avec léger halo, façon LED) =====
+// ===== Needle (with a slight halo, LED-like) =====
 let needleAngle = 225 - level * 270
 NSGraphicsContext.current?.saveGraphicsState()
 let glow = NSShadow()
@@ -130,7 +130,7 @@ NSColor.white.withAlphaComponent(0.97).setFill()
 radialCapsule(from: 140, to: 228, width: 27, angle: needleAngle).fill()
 NSGraphicsContext.current?.restoreGraphicsState()
 
-// ===== Léger éclat en haut de la squircle =====
+// ===== Subtle gleam at the top of the squircle =====
 NSGraphicsContext.current?.saveGraphicsState()
 squircle.addClip()
 NSGradient(colorsAndLocations:

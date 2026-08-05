@@ -1,9 +1,9 @@
-// Scarlett Volume — contrôle du volume pour Focusrite Scarlett (et toute interface
-// audio sans volume logiciel) depuis la barre de menus et les touches de volume.
+// Scarlett Volume — volume control for Focusrite Scarlett (and any audio
+// interface without software volume) from the menu bar and the volume keys.
 //
-// Principe : macOS envoie l'audio système vers BlackHole (périphérique virtuel) ;
-// l'app recopie ce flux vers la Scarlett en appliquant un gain logiciel, via un
-// agrégat CoreAudio privé. À 100 %, le signal passe intact (bit-perfect).
+// How it works: macOS sends system audio to BlackHole (virtual device); the app
+// copies that stream to the Scarlett while applying a software gain, through a
+// private CoreAudio aggregate. At 100%, the signal passes through intact (bit-perfect).
 
 import Cocoa
 import ApplicationServices
@@ -12,11 +12,11 @@ import AVFoundation
 import Accelerate
 import ServiceManagement
 
-// MARK: - Constantes
+// MARK: - Constants
 
 private let SCARLETT_HINT = "Scarlett"
 private let BLACKHOLE_HINT = "BlackHole"
-private let VIRTUAL_UID = "Scarlett Volume_UID" // UID du driver personnalisé (voir build.sh)
+private let VIRTUAL_UID = "Scarlett Volume_UID" // UID of the custom driver (see build.sh)
 private let STEP: Float = 1.0 / 16.0
 private let FINE_STEP: Float = 1.0 / 64.0
 
@@ -29,7 +29,7 @@ extension Notification.Name {
     static let stateChanged = Notification.Name("scarlettVolume.stateChanged")
 }
 
-// MARK: - Aides CoreAudio
+// MARK: - CoreAudio helpers
 
 private func caAddr(_ sel: AudioObjectPropertySelector,
                     _ scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) -> AudioObjectPropertyAddress {
@@ -147,12 +147,12 @@ private func caBuiltInOutput() -> AudioDeviceID? {
     }
 }
 
-// MARK: - Rendu temps réel
+// MARK: - Real-time rendering
 
-// Dans l'agrégat, l'ordre des buffers suit l'ordre des sous-périphériques :
-// entrées = [BlackHole..., Scarlett...], sorties = [BlackHole..., Scarlett...].
-// On copie les entrées BlackHole vers les sorties Scarlett avec le gain,
-// et on force le silence sur la sortie BlackHole (sinon boucle de réinjection).
+// In the aggregate, buffer order follows the subdevice order:
+// inputs = [BlackHole..., Scarlett...], outputs = [BlackHole..., Scarlett...].
+// We copy the BlackHole inputs to the Scarlett outputs with the gain applied,
+// and force silence on the BlackHole output (otherwise a feedback loop occurs).
 private func render(_ input: UnsafePointer<AudioBufferList>,
                     _ output: UnsafeMutablePointer<AudioBufferList>,
                     _ bhInBufs: Int, _ bhOutBufs: Int, _ gain: Float) {
@@ -189,7 +189,7 @@ private func render(_ input: UnsafePointer<AudioBufferList>,
     }
 }
 
-// MARK: - Moteur audio (agrégat BlackHole → Scarlett)
+// MARK: - Audio engine (BlackHole → Scarlett aggregate)
 
 final class Engine {
     static let shared = Engine()
@@ -199,8 +199,8 @@ final class Engine {
     private(set) var blackhole: AudioDeviceID = 0
     let gain: UnsafeMutablePointer<Float>
 
-    // Le périphérique virtuel expose un volume/mute natif : macOS gère alors
-    // touches et HUD lui-même, et la passerelle reste à gain 1 (bit-perfect).
+    // The virtual device exposes native volume/mute: macOS then handles the keys
+    // and HUD itself, and the bridge stays at gain 1 (bit-perfect).
     private(set) var nativeVolume = false
 
     private var aggregate: AudioDeviceID = 0
@@ -211,7 +211,7 @@ final class Engine {
     private var controlListenerDevice: AudioDeviceID = 0
 
     var onRateChange: (() -> Void)?
-    var onControlChange: (() -> Void)? // volume/mute changé depuis le système
+    var onControlChange: (() -> Void)? // volume/mute changed from the system
 
     private init() {
         gain = UnsafeMutablePointer<Float>.allocate(capacity: 1)
@@ -224,7 +224,7 @@ final class Engine {
     var blackholeInstalled: Bool { blackhole != 0 }
     var scarlettPresent: Bool { scarlett != 0 }
 
-    // Le driver personnalisé est présent (pas juste un vieux BlackHole)
+    // The custom driver is present (not just an old BlackHole)
     var properVirtualInstalled: Bool {
         caDevices().contains { caDeviceUID($0) == VIRTUAL_UID }
     }
@@ -232,14 +232,14 @@ final class Engine {
     @discardableResult
     func discover() -> Bool {
         let devices = caDevices()
-        // Périphérique virtuel : le nôtre en priorité, sinon un BlackHole standard
+        // Virtual device: ours first, otherwise a standard BlackHole
         blackhole = devices.first { caDeviceUID($0) == VIRTUAL_UID }
             ?? devices.first { id in
                 guard let name = caString(id, kAudioObjectPropertyName) else { return false }
                 return name.localizedCaseInsensitiveContains(BLACKHOLE_HINT) &&
                        caStreamCount(id, kAudioObjectPropertyScopeOutput) > 0
             } ?? 0
-        // L'interface physique : nom « Scarlett » mais pas notre périphérique virtuel
+        // The physical interface: named "Scarlett" but not our virtual device
         scarlett = devices.first { id in
             guard id != blackhole, caDeviceUID(id) != VIRTUAL_UID,
                   let name = caString(id, kAudioObjectPropertyName) else { return false }
@@ -257,7 +257,7 @@ final class Engine {
               let bhUID = caString(blackhole, kAudioDevicePropertyDeviceUID),
               let scUID = caString(scarlett, kAudioDevicePropertyDeviceUID) else { return false }
 
-        // Aligner BlackHole sur la fréquence de la Scarlett avant l'agrégation
+        // Align BlackHole to the Scarlett's sample rate before aggregating
         let rate = caNominalRate(scarlett)
         if rate > 0, caNominalRate(blackhole) != rate { caSetNominalRate(blackhole, rate) }
 
@@ -265,7 +265,7 @@ final class Engine {
             "name": "Scarlett Volume Engine",
             "uid": "com.kortexs.scarlett-volume.engine",
             "private": 1,
-            "master": scUID, // horloge : la Scarlett, BlackHole compense la dérive
+            "master": scUID, // clock: the Scarlett, BlackHole compensates for drift
             "subdevices": [
                 ["uid": bhUID, "drift": 1],
                 ["uid": scUID],
@@ -314,7 +314,7 @@ final class Engine {
         running = false
     }
 
-    // La Scarlett change de fréquence (ex. session à 96 kHz) → on reconstruit l'agrégat
+    // The Scarlett changes sample rate (e.g. a 96 kHz session) → rebuild the aggregate
     private func installRateListener() {
         guard scarlett != 0 else { return }
         var address = caAddr(kAudioDevicePropertyNominalSampleRate)
@@ -336,7 +336,7 @@ final class Engine {
         rateListenerDevice = 0
     }
 
-    // Volume/mute ajustés depuis le Centre de contrôle ou les touches → on suit
+    // Volume/mute adjusted from Control Center or the keys → we follow along
     private func installControlListeners() {
         guard blackhole != 0 else { return }
         let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
@@ -362,12 +362,12 @@ final class Engine {
     }
 }
 
-// MARK: - État du volume
+// MARK: - Volume state
 
 final class VolumeState {
     static let shared = VolumeState()
     private let defaults = UserDefaults.standard
-    private var stored: Float      // dernier volume connu (persiste entre sessions)
+    private var stored: Float      // last known volume (persists across sessions)
     private var storedMuted: Bool
 
     private init() {
@@ -375,8 +375,8 @@ final class VolumeState {
         storedMuted = defaults.bool(forKey: "muted")
     }
 
-    // En mode natif, la source de vérité est le périphérique virtuel lui-même :
-    // Centre de contrôle, touches et notre menu pilotent le même contrôle.
+    // In native mode, the source of truth is the virtual device itself:
+    // Control Center, the keys, and our menu all drive the same control.
     private var native: Bool { Engine.shared.running && Engine.shared.nativeVolume }
 
     var volume: Float {
@@ -417,7 +417,7 @@ final class VolumeState {
         }
     }
 
-    // Au démarrage du moteur : restaure l'état persisté sur le périphérique
+    // On engine startup: restore the persisted state onto the device
     func pushToDevice() {
         if native {
             caSetFloat32(Engine.shared.blackhole, kAudioDevicePropertyVolumeScalar,
@@ -428,7 +428,7 @@ final class VolumeState {
         applyGain()
     }
 
-    // Volume/mute changé depuis le système (Centre de contrôle, touches natives)
+    // Volume/mute changed from the system (Control Center, native keys)
     func syncFromDevice() {
         guard native else { return }
         if let v = caFloat32(Engine.shared.blackhole, kAudioDevicePropertyVolumeScalar,
@@ -446,10 +446,10 @@ final class VolumeState {
 
     private func applyGain() {
         if native {
-            // Le driver applique volume et sourdine : passerelle transparente
+            // The driver applies volume and mute: transparent bridge
             Engine.shared.gain.pointee = 1
         } else {
-            // Mode secours : courbe perceptuelle v³ (50 % ≈ −18 dB), 100 % = intact
+            // Fallback mode: perceptual curve v³ (50% ≈ −18 dB), 100% = intact
             Engine.shared.gain.pointee = storedMuted ? 0 : powf(stored, 3)
         }
         NotificationCenter.default.post(name: .stateChanged, object: nil)
@@ -461,7 +461,7 @@ final class VolumeState {
     }
 }
 
-// MARK: - HUD (bulle de volume façon système)
+// MARK: - HUD (system-style volume bubble)
 
 private final class HUDView: NSView {
     var volume: Float = 0
@@ -471,7 +471,7 @@ private final class HUDView: NSView {
         let inset: CGFloat = 16
         let topLine: CGFloat = bounds.height - 26
 
-        // Icône
+        // Icon
         let symbol = (muted || volume == 0) ? "speaker.slash.fill"
             : volume < 0.34 ? "speaker.wave.1.fill"
             : volume < 0.67 ? "speaker.wave.2.fill" : "speaker.wave.3.fill"
@@ -482,7 +482,7 @@ private final class HUDView: NSView {
                         from: .zero, operation: .sourceOver, fraction: 1)
         }
 
-        // Légende
+        // Caption
         let title = "Scarlett Volume"
         let titleAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 12, weight: .semibold),
@@ -490,8 +490,8 @@ private final class HUDView: NSView {
         ]
         (title as NSString).draw(at: NSPoint(x: inset + 26, y: topLine), withAttributes: titleAttrs)
 
-        // Pourcentage
-        let text = muted ? "Sourdine" : "\(Int((volume * 100).rounded())) %"
+        // Percentage
+        let text = muted ? "Muted" : "\(Int((volume * 100).rounded())) %"
         let pctAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium),
             .foregroundColor: NSColor.secondaryLabelColor,
@@ -500,7 +500,7 @@ private final class HUDView: NSView {
         (text as NSString).draw(at: NSPoint(x: bounds.width - inset - textSize.width, y: topLine),
                                 withAttributes: pctAttrs)
 
-        // Barre de niveau
+        // Level bar
         let track = NSRect(x: inset, y: 16, width: bounds.width - inset * 2, height: 6)
         NSColor.quaternaryLabelColor.setFill()
         NSBezierPath(roundedRect: track, xRadius: 3, yRadius: 3).fill()
@@ -578,7 +578,7 @@ private extension NSImage {
     }
 }
 
-// MARK: - Interception des touches de volume
+// MARK: - Volume key interception
 
 private func mediaKeyCallback(proxy: CGEventTapProxy, type: CGEventType,
                               event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
@@ -598,8 +598,8 @@ private func mediaKeyCallback(proxy: CGEventTapProxy, type: CGEventType,
     guard keyCode == KEY_SOUND_UP || keyCode == KEY_SOUND_DOWN || keyCode == KEY_MUTE else {
         return Unmanaged.passUnretained(event)
     }
-    // Si le moteur n'est pas actif (autre sortie choisie, Scarlett absente…),
-    // on laisse macOS gérer les touches normalement.
+    // If the engine isn't active (another output selected, Scarlett absent…),
+    // we let macOS handle the keys normally.
     guard delegate.interceptActive else { return Unmanaged.passUnretained(event) }
 
     let flags = data1 & 0xFFFF
@@ -608,7 +608,7 @@ private func mediaKeyCallback(proxy: CGEventTapProxy, type: CGEventType,
         let fine = ns.modifierFlags.contains(.shift) && ns.modifierFlags.contains(.option)
         DispatchQueue.main.async { delegate.handleMediaKey(keyCode, fine: fine) }
     }
-    return nil // consommé (down et up) : pas de bezel « interdit » du système
+    return nil // consumed (down and up): no system "forbidden" bezel
 }
 
 // MARK: - Application
@@ -633,7 +633,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         activity = ProcessInfo.processInfo.beginActivity(
             options: [.userInitiatedAllowingIdleSystemSleep],
-            reason: "Passerelle audio Scarlett")
+            reason: "Scarlett audio bridge")
         Engine.shared.onRateChange = { [weak self] in self?.restartEngine() }
         Engine.shared.onControlChange = { VolumeState.shared.syncFromDevice() }
         buildStatusItem()
@@ -644,7 +644,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         requestMicThenStart()
         refreshUI()
 
-        // Driver virtuel absent (ou vieux BlackHole générique) ? On propose l'installation
+        // Virtual driver missing (or old generic BlackHole)? Offer to install it
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
             guard let self else { return }
             if !Engine.shared.properVirtualInstalled { self.offerDriverInstall() }
@@ -654,7 +654,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         let e = Engine.shared
         e.stop()
-        // Rendre la sortie à la Scarlett (ou aux haut-parleurs internes)
+        // Return the output to the Scarlett (or the internal speakers)
         let target = e.scarlettPresent ? e.scarlett : (caBuiltInOutput() ?? 0)
         if target != 0 {
             caSetDefaultDevice(kAudioHardwarePropertyDefaultOutputDevice, target)
@@ -662,7 +662,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    // MARK: Barre de menus
+    // MARK: Menu bar
 
     private func buildStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -679,7 +679,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         sliderItem.view = container
         menu.addItem(sliderItem)
 
-        muteItem = NSMenuItem(title: "Sourdine", action: #selector(toggleMute), keyEquivalent: "m")
+        muteItem = NSMenuItem(title: "Mute", action: #selector(toggleMute), keyEquivalent: "m")
         muteItem.target = self
         menu.addItem(muteItem)
 
@@ -688,24 +688,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         infoItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         menu.addItem(infoItem)
 
-        installItem = NSMenuItem(title: "Installer le périphérique virtuel…",
+        installItem = NSMenuItem(title: "Install the virtual device…",
                                  action: #selector(installDriverAction), keyEquivalent: "")
         installItem.target = self
         menu.addItem(installItem)
 
-        let restart = NSMenuItem(title: "Redémarrer le moteur audio",
+        let restart = NSMenuItem(title: "Restart the audio engine",
                                  action: #selector(restartEngineAction), keyEquivalent: "r")
         restart.target = self
         menu.addItem(restart)
 
         menu.addItem(.separator())
 
-        loginItem = NSMenuItem(title: "Ouvrir à l'ouverture de session",
+        loginItem = NSMenuItem(title: "Open at login",
                                action: #selector(toggleLogin), keyEquivalent: "")
         loginItem.target = self
         menu.addItem(loginItem)
 
-        menu.addItem(NSMenuItem(title: "Quitter Scarlett Volume",
+        menu.addItem(NSMenuItem(title: "Quit Scarlett Volume",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         statusItem.menu = menu
@@ -728,21 +728,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         installDriver()
     }
 
-    // MARK: Installation du périphérique virtuel
+    // MARK: Virtual device installation
 
     private func offerDriverInstall() {
         let alert = NSAlert()
-        alert.messageText = "Installer le périphérique virtuel « Scarlett Volume » ?"
+        alert.messageText = "Install the \"Scarlett Volume\" virtual device?"
         alert.informativeText = """
-        C'est lui qui permet de contrôler le volume de la Scarlett avec les touches \
-        du clavier et l'interface native de macOS (il remplace « BlackHole 2ch » \
-        s'il est présent).
+        It's what lets you control the Scarlett's volume with the keyboard \
+        keys and the native macOS interface (it replaces "BlackHole 2ch" \
+        if present).
 
-        L'installation demande le mot de passe administrateur, puis redémarre le \
-        service audio du Mac (le son coupe une ou deux secondes).
+        Installation asks for the administrator password, then restarts the \
+        Mac's audio service (the sound cuts out for a second or two).
         """
-        alert.addButton(withTitle: "Installer")
-        alert.addButton(withTitle: "Plus tard")
+        alert.addButton(withTitle: "Install")
+        alert.addButton(withTitle: "Later")
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn { installDriver() }
     }
@@ -751,18 +751,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard !installingBlackHole else { return }
         guard let driver = Bundle.main.path(forResource: "Scarlett Volume", ofType: "driver") else {
             let alert = NSAlert()
-            alert.messageText = "Driver introuvable"
-            alert.informativeText = "« Scarlett Volume.driver » manque dans les ressources de l'app. "
-                + "Recompile l'app avec build.sh."
+            alert.messageText = "Driver not found"
+            alert.informativeText = "\"Scarlett Volume.driver\" is missing from the app's resources. "
+                + "Rebuild the app with build.sh."
             NSApp.activate(ignoringOtherApps: true)
             alert.runModal()
             return
         }
         installingBlackHole = true
-        infoItem.title = "Installation du périphérique virtuel…"
+        infoItem.title = "Installing the virtual device…"
 
-        // Remplace l'ancien BlackHole le cas échéant, installe notre driver,
-        // puis redémarre coreaudiod — avec l'invite de mot de passe native
+        // Replace the old BlackHole if present, install our driver,
+        // then restart coreaudiod — with the native password prompt
         let hal = "/Library/Audio/Plug-Ins/HAL"
         let shell = "/bin/rm -rf '\(hal)/BlackHole2ch.driver' '\(hal)/Scarlett Volume.driver' && "
             + "/bin/cp -R '\(driver)' '\(hal)/' && /usr/bin/killall coreaudiod"
@@ -782,8 +782,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             DispatchQueue.main.async {
                 self?.installingBlackHole = false
                 if ok {
-                    // coreaudiod redémarre : on relance le moteur quand BlackHole apparaît
-                    // (le listener de périphériques s'en charge, ceci est une ceinture de sécurité)
+                    // coreaudiod restarts: we relaunch the engine when BlackHole appears
+                    // (the device listener handles it, this is a safety belt)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self?.devicesChanged() }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 6) { self?.devicesChanged() }
                 }
@@ -806,10 +806,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         refreshUI()
     }
 
-    // MARK: Moteur
+    // MARK: Engine
 
     private func requestMicThenStart() {
-        // La capture de l'entrée BlackHole passe par la permission « micro » de macOS
+        // Capturing the BlackHole input goes through the macOS "microphone" permission
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
         case .authorized:
             micAuthorized = true
@@ -837,8 +837,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         VolumeState.shared.pushToDevice()
         caSetDefaultDevice(kAudioHardwarePropertyDefaultOutputDevice, Engine.shared.blackhole)
         caSetDefaultDevice(kAudioHardwarePropertyDefaultSystemOutputDevice, Engine.shared.blackhole)
-        // Volume natif : macOS gère touches + HUD, aucun event tap nécessaire.
-        // Sinon (vieux BlackHole sans volume), on intercepte les touches nous-mêmes.
+        // Native volume: macOS handles keys + HUD, no event tap needed.
+        // Otherwise (old BlackHole without volume), we intercept the keys ourselves.
         if !Engine.shared.nativeVolume { setupTapWhenTrusted() }
         updateIntercept()
         refreshUI()
@@ -875,7 +875,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             startEngine()
         }
         if !e.running && !e.scarlettPresent {
-            // Scarlett débranchée : basculer sur les haut-parleurs internes
+            // Scarlett unplugged: switch to the internal speakers
             if let builtIn = caBuiltInOutput() {
                 caSetDefaultDevice(kAudioHardwarePropertyDefaultOutputDevice, builtIn)
                 caSetDefaultDevice(kAudioHardwarePropertyDefaultSystemOutputDevice, builtIn)
@@ -891,7 +891,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             caDefaultDevice(kAudioHardwarePropertyDefaultOutputDevice) == e.blackhole
     }
 
-    // MARK: Touches de volume
+    // MARK: Volume keys
 
     private func setupTapWhenTrusted() {
         let prompt = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
@@ -953,19 +953,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         muteItem.state = s.muted ? .on : .off
 
         if installingBlackHole {
-            infoItem.title = "Installation du périphérique virtuel…"
+            infoItem.title = "Installing the virtual device…"
         } else if e.running {
-            infoItem.title = "Sortie : \(e.scarlettName) — \(Int(caNominalRate(e.scarlett) / 1000)) kHz"
+            infoItem.title = "Output: \(e.scarlettName) — \(Int(caNominalRate(e.scarlett) / 1000)) kHz"
         } else if !micAuthorized {
-            infoItem.title = "⚠️ Accès micro refusé (Réglages → Confidentialité)"
+            infoItem.title = "⚠️ Microphone access denied (Settings → Privacy)"
         } else {
             e.discover()
             if !e.blackholeInstalled {
-                infoItem.title = "⚠️ Périphérique virtuel non installé"
+                infoItem.title = "⚠️ Virtual device not installed"
             } else if !e.scarlettPresent {
-                infoItem.title = "⚠️ Scarlett non détectée"
+                infoItem.title = "⚠️ Scarlett not detected"
             } else {
-                infoItem.title = "Moteur arrêté"
+                infoItem.title = "Engine stopped"
             }
         }
 
@@ -979,8 +979,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.image = knobStatusIcon(volume: s.volume, muted: s.muted, running: e.running)
     }
 
-    // Mini-bouton de volume monochrome (template : macOS le teinte selon la barre).
-    // L'aiguille suit le volume, les graduations s'éteignent au-delà du niveau.
+    // Monochrome mini volume knob (template: macOS tints it to match the bar).
+    // The needle follows the volume, the ticks turn off beyond the level.
     private func knobStatusIcon(volume: Float, muted: Bool, running: Bool) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
             let c = NSPoint(x: 9, y: 9)
@@ -1001,7 +1001,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let ring = NSBezierPath(ovalIn: NSRect(x: c.x - 6.1, y: c.y - 6.1, width: 12.2, height: 12.2))
             ring.lineWidth = 1.5
 
-            // Moteur arrêté : anneau pointillé estompé, rien d'autre
+            // Engine stopped: faded dashed ring, nothing else
             guard running else {
                 ring.setLineDash([2.4, 2.2], count: 2, phase: 0)
                 NSColor.black.withAlphaComponent(0.5).setStroke()
@@ -1012,7 +1012,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NSColor.black.setStroke()
             ring.stroke()
 
-            // Graduations (min bas-gauche → max bas-droite, course 270°)
+            // Ticks (min bottom-left → max bottom-right, 270° sweep)
             let angles: [CGFloat] = [225, 157.5, 90, 22.5, -45]
             for (i, a) in angles.enumerated() {
                 let t = Float(i) / Float(angles.count - 1)
@@ -1023,7 +1023,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
             NSColor.black.setStroke()
             if muted {
-                // Barre diagonale façon « sourdine »
+                // Diagonal "mute" slash
                 let slash = NSBezierPath()
                 slash.move(to: NSPoint(x: c.x - 4.4, y: c.y + 4.4))
                 slash.line(to: NSPoint(x: c.x + 4.4, y: c.y - 4.4))
@@ -1031,7 +1031,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 slash.lineCapStyle = .round
                 slash.stroke()
             } else {
-                // Aiguille
+                // Needle
                 let a = 225 - CGFloat(max(0, min(1, volume))) * 270
                 ray(a, 1.0, 4.6, 1.9).stroke()
             }
@@ -1043,7 +1043,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 }
 
-// MARK: - Point d'entrée
+// MARK: - Entry point
 
 let app = NSApplication.shared
 let delegate = AppDelegate()

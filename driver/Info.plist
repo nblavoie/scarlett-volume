@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>fr</string>
+	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>Scarlett Volume</string>
 	<key>CFBundleIconFile</key>
@@ -35,6 +35,6 @@
 		</array>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
-	<string>BlackHole © Existential Audio Inc. (GPL-3.0) — build personnalisé « Scarlett Volume »</string>
+	<string>BlackHole © Existential Audio Inc. (GPL-3.0) — custom "Scarlett Volume" build</string>
 </dict>
 </plist>

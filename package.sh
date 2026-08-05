@@ -1,15 +1,15 @@
 #!/bin/bash
-# Construit l'installeur .pkg : app → /Applications, driver → HAL,
-# redémarrage de coreaudiod et ouverture de l'app en postinstall.
-# Usage : ./package.sh [version]   (défaut : 1.0.0)
+# Build the .pkg installer: app → /Applications, driver → HAL,
+# restart coreaudiod and open the app in postinstall.
+# Usage: ./package.sh [version]   (default: 1.0.0)
 set -euo pipefail
 cd "$(dirname "$0")"
 VERSION="${1:-1.0.0}"
 
 ./build.sh
 
-# pkgroot dans un dossier temporaire : pkgbuild passe son contenu en root:wheel,
-# il ne doit donc pas vivre dans build/ (sinon le rm -rf suivant échoue)
+# pkgroot in a temp folder: pkgbuild sets its contents to root:wheel,
+# so it must not live in build/ (otherwise the following rm -rf fails)
 ROOT="$(mktemp -d "${TMPDIR:-/tmp}/scarlett-volume-pkgroot.XXXXXX")"
 rm -f build/dist.xml build/component.pkg
 mkdir -p "$ROOT/Applications" "$ROOT/Library/Audio/Plug-Ins/HAL"

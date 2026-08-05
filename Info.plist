@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>fr</string>
+	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>ScarlettVolume</string>
 	<key>CFBundleIconFile</key>
@@ -25,7 +25,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Scarlett Volume capture la sortie système (BlackHole) pour la rejouer vers la Scarlett avec contrôle du volume. Aucun micro n'est enregistré.</string>
+	<string>Scarlett Volume captures the system output (BlackHole) to play it back to the Scarlett with volume control. No microphone is recorded.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© Kortexs</string>
 </dict>

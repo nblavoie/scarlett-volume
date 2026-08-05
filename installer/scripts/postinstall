@@ -1,6 +1,6 @@
 #!/bin/sh
-# Recharge le service audio pour que le driver « Scarlett Volume » apparaisse,
-# puis ouvre l'app dans la session de l'utilisateur connecté.
+# Reload the audio service so the "Scarlett Volume" driver appears,
+# then open the app in the logged-in user's session.
 killall coreaudiod 2>/dev/null || true
 sleep 2
 

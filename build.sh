@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compile le driver virtuel « Scarlett Volume » (BlackHole renommé) puis l'app.
+# Build the "Scarlett Volume" virtual driver (renamed BlackHole), then the app.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -9,8 +9,8 @@ rm -rf build
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" \
          "$DRIVER/Contents/MacOS" "$DRIVER/Contents/Resources"
 
-# 1) Driver HAL : BlackHole compilé avec un nom personnalisé.
-#    Le device expose un volume/mute natif → macOS gère touches + HUD système.
+# 1) HAL driver: BlackHole compiled with a custom name.
+#    The device exposes a native volume/mute → macOS handles the keys + system HUD.
 clang -O2 -fno-objc-arc -bundle \
   -framework CoreFoundation -framework CoreAudio -framework Accelerate \
   -DkDriver_Name='"Scarlett Volume"' \
@@ -24,7 +24,7 @@ cp driver/Info.plist "$DRIVER/Contents/Info.plist"
 cp driver/BlackHole.icns "$DRIVER/Contents/Resources/BlackHole.icns"
 codesign --force --sign - "$DRIVER"
 
-# 2) App de barre de menus (embarque le driver pour l'installer à la demande)
+# 2) Menu-bar app (bundles the driver so it can be installed on demand)
 swiftc -O -o "$APP/Contents/MacOS/ScarlettVolume" main.swift \
   -framework Cocoa -framework CoreAudio -framework AVFoundation \
   -framework Accelerate -framework ServiceManagement

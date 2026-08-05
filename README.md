@@ -1,45 +1,44 @@
-<p align="center"><img src="assets/icon_1024.png" width="160" alt="Icône Scarlett Volume"></p>
+<p align="center"><img src="assets/icon_1024.png" width="160" alt="Scarlett Volume icon"></p>
 
 # Scarlett Volume
 
-Utilitaire macOS pour contrôler le volume d'une interface audio sans volume
-logiciel (Focusrite Scarlett 2i2 4th Gen, etc.) — alternative gratuite à
-SoundSource pour ce cas d'usage. Touches de volume, HUD **natif** de macOS,
-Centre de contrôle : tout affiche « Scarlett Volume ».
+macOS utility for controlling the volume of an audio interface that has no
+software volume (Focusrite Scarlett 2i2 4th Gen, etc.) — a free alternative to
+SoundSource for this use case. Volume keys, **native** macOS HUD, Control
+Center: everything shows "Scarlett Volume".
 
-## Comment ça marche
+## How it works
 
-macOS refuse de contrôler le volume de la Scarlett parce que l'interface
-n'expose aucun contrôle de gain USB : le Mac lui envoie un signal brut à plein
-volume.
+macOS refuses to control the Scarlett's volume because the interface exposes no
+USB gain control: the Mac sends it a raw signal at full volume.
 
-Deux morceaux :
+Two pieces:
 
-1. **`Scarlett Volume.driver`** — un build personnalisé de
+1. **`Scarlett Volume.driver`** — a custom build of
    [BlackHole](https://github.com/ExistentialAudio/BlackHole) (GPL-3.0),
-   renommé « Scarlett Volume » et compilé depuis `driver/BlackHole.c` par
-   `build.sh`. C'est un périphérique de sortie virtuel qui expose un volume et
-   une sourdine **natifs** (courbe −64 dB → 0 dB, appliquée au flux par le
-   driver). macOS le voit comme une sortie standard : touches de volume, HUD
-   système et Centre de contrôle fonctionnent nativement.
-2. **`Scarlett Volume.app`** — l'app de barre de menus. Elle met le périphérique
-   virtuel en sortie par défaut, crée un agrégat CoreAudio privé (virtuel +
-   Scarlett, horloge sur la Scarlett, compensation de dérive) et recopie le flux
-   vers la Scarlett en temps réel à gain 1 (bit-perfect : le volume est déjà
-   appliqué par le driver). Elle persiste le volume entre les sessions, gère les
-   branchements/débranchements et les changements de fréquence.
+   renamed "Scarlett Volume" and compiled from `driver/BlackHole.c` by
+   `build.sh`. It's a virtual output device that exposes **native** volume and
+   mute (−64 dB → 0 dB curve, applied to the stream by the driver). macOS sees
+   it as a standard output: volume keys, system HUD, and Control Center work
+   natively.
+2. **`Scarlett Volume.app`** — the menu-bar app. It sets the virtual device as
+   the default output, creates a private CoreAudio aggregate device (virtual +
+   Scarlett, clocked on the Scarlett, with drift compensation) and copies the
+   stream to the Scarlett in real time at unity gain (bit-perfect: the volume is
+   already applied by the driver). It persists the volume across sessions and
+   handles plug/unplug events and sample-rate changes.
 
-Le nom du périphérique — donc ce que macOS affiche partout — est « Scarlett
-Volume » (UID `Scarlett Volume_UID`, défini dans `build.sh`).
+The device name — hence what macOS displays everywhere — is "Scarlett Volume"
+(UID `Scarlett Volume_UID`, defined in `build.sh`).
 
 ## Installation
 
-Le plus simple : télécharger le **.pkg** de la
-[dernière release](https://github.com/nblavoie/scarlett-volume/releases) —
-il installe l'app et le driver, redémarre le service audio et lance l'app.
-(Non notarié : clic droit → Ouvrir si macOS le bloque.)
+The easiest way: download the **.pkg** from the
+[latest release](https://github.com/nblavoie/scarlett-volume/releases) —
+it installs the app and the driver, restarts the audio service, and launches
+the app. (Not notarized: right-click → Open if macOS blocks it.)
 
-Depuis les sources :
+From source:
 
 ```bash
 ./build.sh
@@ -47,79 +46,78 @@ cp -R "build/Scarlett Volume.app" /Applications/
 open "/Applications/Scarlett Volume.app"
 ```
 
-Pour produire l'installeur .pkg soi-même :
+To build the .pkg installer yourself:
 
 ```bash
 ./package.sh 1.0.0   # → build/Scarlett-Volume-1.0.0.pkg
 ```
 
-Le driver est embarqué dans l'app. Au lancement, s'il n'est pas installé (ou si
-seul un vieux « BlackHole 2ch » est présent), l'app propose de l'installer :
-invite de mot de passe macOS native, remplacement de l'ancien BlackHole le cas
-échéant, redémarrage automatique de `coreaudiod` (le son coupe une ou deux
-secondes), puis démarrage automatique du moteur.
+The driver is bundled inside the app. At launch, if it isn't installed (or if
+only an old "BlackHole 2ch" is present), the app offers to install it: native
+macOS password prompt, replacement of the old BlackHole if applicable,
+automatic restart of `coreaudiod` (sound cuts out for a second or two), then
+automatic start of the engine.
 
-Permission requise : **Microphone** — c'est l'étiquette générique de macOS pour
-toute capture audio ; elle sert uniquement à relire le flux du périphérique
-virtuel (l'audio système). Aucun micro physique n'est jamais ouvert, rien n'est
-enregistré. Le point orange de capture reste affiché pendant que le moteur
-tourne : c'est normal.
+Required permission: **Microphone** — this is macOS's generic label for any
+audio capture; it is used solely to read back the stream from the virtual
+device (the system audio). No physical microphone is ever opened, nothing is
+recorded. The orange capture dot stays visible while the engine is running:
+that's normal.
 
-La permission Accessibilité n'est **plus nécessaire** : les touches de volume
-sont gérées nativement par macOS. (L'app garde un mode secours — event tap +
-HUD maison — si le périphérique virtuel détecté n'a pas de volume natif, p. ex.
-un vieux BlackHole standard.)
+The Accessibility permission is **no longer needed**: the volume keys are
+handled natively by macOS. (The app keeps a fallback mode — event tap + custom
+HUD — in case the detected virtual device has no native volume, e.g. an old
+standard BlackHole.)
 
-Après un rebuild (`./build.sh`), la signature ad hoc change : macOS peut
-redemander la permission micro.
+After a rebuild (`./build.sh`), the ad hoc signature changes: macOS may ask for
+the microphone permission again.
 
-## Utilisation
+## Usage
 
-- **Touches volume +/− et sourdine** : natives, avec le HUD système habituel.
-- **Centre de contrôle / Réglages → Son** : curseur actif, périphérique
-  « Scarlett Volume ».
-- **Icône barre de menus** : curseur (synchronisé avec le système), sourdine,
-  redémarrage du moteur, ouverture à l'ouverture de session, quitter.
-- En quittant, l'app remet la sortie système sur la Scarlett.
-- Scarlett débranchée → bascule sur les haut-parleurs internes, reprise
-  automatique au retour.
-- Le bouton physique de la Scarlett continue de fonctionner (il agit en aval).
+- **Volume +/− and mute keys**: native, with the usual system HUD.
+- **Control Center / Settings → Sound**: active slider, device
+  "Scarlett Volume".
+- **Menu-bar icon**: slider (synced with the system), mute, restart the engine,
+  open at login, quit.
+- On quit, the app sets the system output back to the Scarlett.
+- Scarlett unplugged → switches to the internal speakers, resumes automatically
+  when it comes back.
+- The Scarlett's physical knob still works (it acts downstream).
 
 ## Notes
 
-- **Quitter SoundSource** : les deux se disputeraient la sortie par défaut.
-- Si l'app plante ou est forcée à quitter, la sortie peut rester sur le
-  périphérique virtuel (silence) : relancer l'app ou choisir la Scarlett dans
-  Réglages → Son.
-- L'ancien `BlackHole2ch.driver` installé par Homebrew est supprimé lors de
-  l'installation du driver ; la fiche brew `blackhole-2ch` peut rester dans
-  `brew list` — `brew uninstall --cask blackhole-2ch` pour nettoyer (sans
-  conséquence sinon).
-- Volume à 100 % = passage bit-perfect (gain unitaire dans le driver et dans la
-  passerelle).
+- **Quit SoundSource**: the two would fight over the default output.
+- If the app crashes or is force-quit, the output may stay on the virtual
+  device (silence): relaunch the app or select the Scarlett in
+  Settings → Sound.
+- The old `BlackHole2ch.driver` installed by Homebrew is removed when the driver
+  is installed; the `blackhole-2ch` brew entry may remain in `brew list` —
+  `brew uninstall --cask blackhole-2ch` to clean it up (otherwise harmless).
+- Volume at 100% = bit-perfect passthrough (unity gain in the driver and in the
+  bridge).
 
-## Fichiers
+## Files
 
-- `main.swift` — l'app (~800 lignes)
-- `driver/BlackHole.c` + `driver/Info.plist` — le driver virtuel (source
-  BlackHole 0.7.x, GPL-3.0, © Existential Audio)
-- `Info.plist` — LSUIElement (pas d'icône Dock), description micro
-- `build.sh` — compile driver + app, embarque le driver dans l'app
-- `package.sh` + `installer/` — construit l'installeur .pkg (app + driver +
-  postinstall qui redémarre coreaudiod et lance l'app)
-- `assets/make_icon.swift` — dessine l'icône en Core Graphics
-  (`swift make_icon.swift` puis `iconutil` pour régénérer `AppIcon.icns`)
+- `main.swift` — the app (~800 lines)
+- `driver/BlackHole.c` + `driver/Info.plist` — the virtual driver (BlackHole
+  0.7.x source, GPL-3.0, © Existential Audio)
+- `Info.plist` — LSUIElement (no Dock icon), microphone description
+- `build.sh` — compiles driver + app, bundles the driver into the app
+- `package.sh` + `installer/` — builds the .pkg installer (app + driver +
+  postinstall that restarts coreaudiod and launches the app)
+- `assets/make_icon.swift` — draws the icon in Core Graphics
+  (`swift make_icon.swift` then `iconutil` to regenerate `AppIcon.icns`)
 
-## Prérequis
+## Requirements
 
-- macOS 13+ (développé et testé sur macOS 26)
-- Xcode Command Line Tools (`xcode-select --install`) pour `swiftc` et `clang`
+- macOS 13+ (developed and tested on macOS 26)
+- Xcode Command Line Tools (`xcode-select --install`) for `swiftc` and `clang`
 
-## Licence
+## License
 
-GPL-3.0 (voir `LICENSE`). Le driver virtuel est un build renommé de
+GPL-3.0 (see `LICENSE`). The virtual driver is a renamed build of
 [BlackHole](https://github.com/ExistentialAudio/BlackHole)
-© [Existential Audio Inc.](https://existential.audio), distribué sous GPL-3.0 —
-le code source du driver est inclus tel quel dans `driver/`, seules des
-constantes de compilation (nom, UID, bundle ID) sont personnalisées via
-`build.sh`. L'app de barre de menus (`main.swift`) est également sous GPL-3.0.
+© [Existential Audio Inc.](https://existential.audio), distributed under GPL-3.0 —
+the driver's source code is included as is in `driver/`, only compilation
+constants (name, UID, bundle ID) are customized via `build.sh`. The menu-bar app
+(`main.swift`) is likewise under GPL-3.0.
